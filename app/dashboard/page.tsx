@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getMotivationMessage } from "@/lib/aiCoach";
+import LogModal from "@/components/modals/LogModal";
 
 import {
     Table,
@@ -37,6 +38,7 @@ import {
 export default function DashboardPage() {
     const [coins, setCoins] = useState(0);
     const [date, setDate] = useState(new Date());
+    const [open, setOpen] = useState(false);
     const [summary, setSummary] = useState({
         total_calories_in: 0,
         total_calories_out: 0,
@@ -296,6 +298,11 @@ export default function DashboardPage() {
                     )}
                 </CardContent>
             </Card>
+            <div className="flex justify-end mb-4">
+                <Button onClick={() => setOpen(true)}>➕ Tambah Makanan</Button>
+            </div>
+
+            {open && <LogModal onClose={() => setOpen(false)} />}
             <Card>
                 <CardHeader className="flex justify-between items-center">
                     <CardTitle>AI Coach</CardTitle>
