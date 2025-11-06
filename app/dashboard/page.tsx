@@ -35,6 +35,7 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [motivation, setMotivation] = useState("");
     const [motivationLoading, setMotivationLoading] = useState(false);
+    const [achievements, setAchievements] = useState([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -81,6 +82,13 @@ export default function DashboardPage() {
                 summaryData[0].net_calories
             );
             setMotivation(motivation);
+
+            const { data: userAchievements } = await supabase
+                .from("user_achievements")
+                .select("*, achievements(name, description)")
+                .eq("user_id", user.id);
+
+            if (userAchievements) setAchievements(userAchievements);
 
             const merged = [
                 ...(foodLogs?.map((f) => ({
@@ -287,6 +295,32 @@ export default function DashboardPage() {
                         <p className="text-gray-500">
                             Klik tombol di atas untuk motivasi harian 💬
                         </p>
+                    )}
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Pencapaian Kamu</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {achievements.length === 0 ? (
+                        <p className="text-gray-500">Belum ada pencapaian 😅</p>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            {achievements.map((a: any) => (
+                                <div
+                                    key={a.id}
+                                    className="p-4 border rounded-xl shadow-sm bg-yellow-50"
+                                >
+                                    <p className="font-bold text-yellow-700">
+                                        🏅 {a.achievements.name}
+                                    </p>
+                                    <p className="text-sm text-gray-700">
+                                        {a.achievements.description}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </CardContent>
             </Card>
