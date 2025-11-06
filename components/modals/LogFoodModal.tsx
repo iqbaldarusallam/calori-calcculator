@@ -15,11 +15,12 @@ import { supabase } from "@/lib/supabaseClient";
 /**
  * Modal untuk log makanan (Tahap 1)
  */
-export default function LogModal({ onClose }: { onClose: () => void }) {
+export default function LogFoodModal({ onClose }: { onClose: () => void }) {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<any[]>([]);
     const [selectedFood, setSelectedFood] = useState<any | null>(null);
-    const [quantity, setQuantity] = useState(1);
+    // store as string to allow free typing (e.g. starting with '.', deleting digits, etc.)
+    const [quantity, setQuantity] = useState("1");
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
@@ -36,8 +37,14 @@ export default function LogModal({ onClose }: { onClose: () => void }) {
             const data = await res.json();
             // data langsung array hasil dari route
             setResults(data);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const message =
+                err instanceof Error
+                    ? err.message
+                    : typeof err === "object"
+                    ? JSON.stringify(err)
+                    : String(err);
+            setError(message);
         } finally {
             setLoading(false);
         }
@@ -58,21 +65,41 @@ export default function LogModal({ onClose }: { onClose: () => void }) {
         }
 
         try {
-            const { error: insertError } = await supabase.rpc("log_food", {
-                p_user_id: user.id,
-                p_food_name: selectedFood.name,
-                p_calories_kcal: Math.round(selectedFood.calories),
-                p_serving_qty: quantity,
-                p_serving_unit: selectedFood.unit || "portion",
-            });
+            // validate quantity before sending
+            const qtyNum = Number(quantity);
+            if (Number.isNaN(qtyNum) || qtyNum <= 0) {
+                setError("Jumlah porsi tidak valid");
+                setSaving(false);
+                return;
+            }
+            const { data: rpcData, error: insertError } = await supabase.rpc(
+                "log_food",
+                {
+                    p_user_id: user.id,
+                    p_food_name: selectedFood.name,
+                    // pass a number for calories (not a string with ::integer cast)
+                    p_calories_kcal: Math.round(Number(selectedFood.calories)),
+                    // ensure quantity is a number
+                    p_serving_qty: qtyNum,
+                    p_serving_unit: selectedFood.unit || "portion",
+                }
+            );
 
             if (insertError) throw insertError;
 
+            if (rpcData) console.log("log_food result", rpcData);
+
             alert("✅ Log makanan berhasil disimpan!");
             onClose();
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            setError(err.message);
+            const message =
+                err instanceof Error
+                    ? err.message
+                    : typeof err === "object"
+                    ? JSON.stringify(err)
+                    : String(err);
+            setError(message);
         } finally {
             setSaving(false);
         }
@@ -134,9 +161,8 @@ export default function LogModal({ onClose }: { onClose: () => void }) {
                             step="0.1"
                             min="0.1"
                             value={quantity}
-                            onChange={(e) =>
-                                setQuantity(parseFloat(e.target.value))
-                            }
+                            // keep raw input string so user can type freely
+                            onChange={(e) => setQuantity(e.target.value)}
                             placeholder="Jumlah porsi"
                         />
                         <div className="flex justify-end gap-2">

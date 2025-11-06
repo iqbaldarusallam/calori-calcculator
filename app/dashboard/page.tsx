@@ -5,7 +5,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getMotivationMessage } from "@/lib/aiCoach";
-import LogModal from "@/components/modals/LogModal";
+import LogFoodModal from "@/components/modals/LogFoodModal";
+import LogActivityModal from "@/components/modals/LogActivityModal";
 
 import {
     Table,
@@ -38,7 +39,6 @@ import {
 export default function DashboardPage() {
     const [coins, setCoins] = useState(0);
     const [date, setDate] = useState(new Date());
-    const [open, setOpen] = useState(false);
     const [summary, setSummary] = useState({
         total_calories_in: 0,
         total_calories_out: 0,
@@ -50,6 +50,8 @@ export default function DashboardPage() {
     const [motivation, setMotivation] = useState("");
     const [motivationLoading, setMotivationLoading] = useState(false);
     const [achievements, setAchievements] = useState([]);
+    const [showFoodModal, setShowFoodModal] = useState(false);
+    const [showActivityModal, setShowActivityModal] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -101,7 +103,7 @@ export default function DashboardPage() {
             setWeeklyData(weeklyData || []);
 
             const motivation = await getMotivationMessage(
-                summaryData[0].net_calories
+                summaryData?.[0]?.net_calories ?? 0
             );
             setMotivation(motivation);
 
@@ -298,11 +300,21 @@ export default function DashboardPage() {
                     )}
                 </CardContent>
             </Card>
-            <div className="flex justify-end mb-4">
-                <Button onClick={() => setOpen(true)}>➕ Tambah Makanan</Button>
+            <div className="flex justify-end gap-2 mb-4">
+                <Button onClick={() => setShowFoodModal(true)}>
+                    + Log Food
+                </Button>
+                <Button onClick={() => setShowActivityModal(true)}>
+                    + Log Activity
+                </Button>
             </div>
+            {showFoodModal && (
+                <LogFoodModal onClose={() => setShowFoodModal(false)} />
+            )}
 
-            {open && <LogModal onClose={() => setOpen(false)} />}
+            {showActivityModal && (
+                <LogActivityModal onClose={() => setShowActivityModal(false)} />
+            )}
             <Card>
                 <CardHeader className="flex justify-between items-center">
                     <CardTitle>AI Coach</CardTitle>
