@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getMotivationMessage } from "@/lib/aiCoach";
+
 import {
     Table,
     TableBody,
@@ -22,6 +24,7 @@ import { CalendarDays } from "lucide-react";
 import dayjs from "dayjs";
 
 export default function DashboardPage() {
+    const [coins, setCoins] = useState(0);
     const [date, setDate] = useState(new Date());
     const [summary, setSummary] = useState({
         total_calories_in: 0,
@@ -30,6 +33,8 @@ export default function DashboardPage() {
     });
     const [logs, setLogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [motivation, setMotivation] = useState("");
+    const [motivationLoading, setMotivationLoading] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -64,6 +69,19 @@ export default function DashboardPage() {
                 .eq("user_id", user.id)
                 .eq("log_date", dayjs(date).format("YYYY-MM-DD"));
 
+            const { data: stats } = await supabase
+                .from("user_stats")
+                .select("total_coins")
+                .eq("user_id", user.id)
+                .single();
+
+            if (stats) setCoins(stats.total_coins);
+
+            const motivation = await getMotivationMessage(
+                summaryData[0].net_calories
+            );
+            setMotivation(motivation);
+
             const merged = [
                 ...(foodLogs?.map((f) => ({
                     id: f.id,
@@ -86,10 +104,71 @@ export default function DashboardPage() {
         fetchData();
     }, [date]);
 
+    const fetchMotivation = async () => {
+        setMotivationLoading(true);
+        try {
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+            if (!user) throw new Error("User tidak ditemukan");
+
+            const { data: summaryData } = await supabase.rpc(
+                "get_daily_summary",
+                {
+                    p_user_id: user.id,
+                    p_log_date: dayjs(date).format("YYYY-MM-DD"),
+                }
+            );
+
+            const netCalories = summaryData?.[0]?.net_calories ?? 0;
+
+            const response = await fetch(
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" +
+                    process.env.NEXT_PUBLIC_GEMINI_API_KEY,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [
+                            {
+                                parts: [
+                                    {
+                                        text: `Berikan pesan motivasi pendek untuk pengguna fitness berdasarkan hasil hari ini. Kalori bersih: ${netCalories} kkal.`,
+                                    },
+                                ],
+                            },
+                        ],
+                    }),
+                }
+            );
+
+            const data = await response.json();
+            const message =
+                data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+                "Terus semangat menjalani hari yang sehat! 💪";
+            setMotivation(message);
+        } catch (error: any) {
+            console.error(error);
+            setMotivation("Gagal mengambil motivasi AI.");
+        }
+        setMotivationLoading(false);
+    };
+
     return (
         <div className="p-6 space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold">Dashboard</h1>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Total Coins</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold text-yellow-500">
+                            {coins} 🪙
+                        </p>
+                    </CardContent>
+                </Card>
+
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button
@@ -186,6 +265,28 @@ export default function DashboardPage() {
                                 )}
                             </TableBody>
                         </Table>
+                    )}
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex justify-between items-center">
+                    <CardTitle>AI Coach</CardTitle>
+                    <Button
+                        onClick={fetchMotivation}
+                        disabled={motivationLoading}
+                    >
+                        {motivationLoading
+                            ? "Memuat..."
+                            : "Dapatkan Motivasi AI"}
+                    </Button>
+                </CardHeader>
+                <CardContent>
+                    {motivation ? (
+                        <p className="text-lg italic">{motivation}</p>
+                    ) : (
+                        <p className="text-gray-500">
+                            Klik tombol di atas untuk motivasi harian 💬
+                        </p>
                     )}
                 </CardContent>
             </Card>
