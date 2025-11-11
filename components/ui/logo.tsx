@@ -1,9 +1,11 @@
 export function Logo({
   size = 70,
   className = "",
+  showText = true,
 }: {
   size?: number;
   className?: string;
+  showText?: boolean;
 }) {
   return (
     <div className={`flex items-center select-none ${className}`}>
@@ -29,14 +31,16 @@ export function Logo({
         />
       </svg>
 
-      <span
-        className="font-bold"
-        style={{
-          fontSize: `${size * 0.45}px`,
-        }}
-      >
-        CalPal
-      </span>
+      {showText && (
+        <span
+          className="font-bold"
+          style={{
+            fontSize: `${size * 0.45}px`,
+          }}
+        >
+          CalPal
+        </span>
+      )}
     </div>
   );
 }
