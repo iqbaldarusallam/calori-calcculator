@@ -113,7 +113,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="relative z-50 flex items-center justify-between px-6 py-3 border-b bg-white shadow-sm">
+      <nav className="fixed top-0 left-0 z-50 w-full flex items-center justify-between px-6 py-3 border-b bg-white shadow-sm">
         <div className="flex items-center gap-1 select-none">
           <Logo size={40} />
         </div>
